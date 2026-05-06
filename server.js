@@ -22,12 +22,33 @@ app.post('/read-receipt', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
+        max_tokens: 800,
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } },
-            { type: 'text', text: 'זוהי קבלה. חלץ ותחזיר JSON בלבד ללא markdown: {"date":"YYYY-MM-DD","amount":123.45,"description":"שם העסק","items":"פריטים"}. אם שדה לא ברור השתמש ב-null.' }
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 }
+            },
+            {
+              type: 'text',
+              text: `׳–׳•׳”׳™ ׳§׳‘׳׳” ׳׳• ׳—׳©׳‘׳•׳ ׳™׳× ׳‘׳¢׳‘׳¨׳™׳×. ׳׳ ׳ ׳—׳׳¥ ׳׳× ׳”׳׳™׳“׳¢ ׳”׳‘׳ ׳•׳”׳—׳–׳¨ JSON ׳‘׳׳‘׳“, ׳׳׳ markdown, ׳׳׳ ׳”׳¡׳‘׳¨׳™׳:
+
+{
+  "date": "YYYY-MM-DD",
+  "amount": <׳¡׳›׳•׳ ׳¡׳•׳₪׳™ ׳׳×׳©׳׳•׳ ׳›׳׳¡׳₪׳¨ ׳‘׳׳‘׳“>,
+  "description": "<׳©׳ ׳”׳¢׳¡׳§ ׳׳• ׳”׳¡׳₪׳§ ׳‘׳¢׳‘׳¨׳™׳×>",
+  "items": "<׳¨׳©׳™׳׳× ׳₪׳¨׳™׳˜׳™׳ ׳©׳ ׳¨׳›׳©׳•, ׳׳•׳₪׳¨׳“׳™׳ ׳‘׳₪׳¡׳™׳§, ׳‘׳¢׳‘׳¨׳™׳×>"
+}
+
+׳”׳ ׳—׳™׳•׳×:
+- date: ׳×׳׳¨׳™׳ ׳”׳§׳‘׳׳” ׳‘׳₪׳•׳¨׳׳˜ YYYY-MM-DD. ׳׳ ׳›׳×׳•׳‘ DD/MM/YY ׳׳– ׳”׳׳¨ ׳‘׳”׳×׳׳.
+- amount: ׳”׳¡׳›׳•׳ ׳”׳›׳•׳׳ ׳׳×׳©׳׳•׳ (׳׳×׳©׳׳•׳ / ׳¡׳”"׳› / total) ׳›׳׳¡׳₪׳¨ ׳¢׳©׳¨׳•׳ ׳™ ׳‘׳׳‘׳“
+- description: ׳©׳ ׳”׳¢׳¡׳§ / ׳”׳—׳ ׳•׳× / ׳”׳¡׳₪׳§ ׳‘׳¢׳‘׳¨׳™׳× ׳›׳₪׳™ ׳©׳׳•׳₪׳™׳¢ ׳‘׳§׳‘׳׳”
+- items: ׳₪׳¨׳˜׳™ ׳”׳₪׳¨׳™׳˜׳™׳ ׳©׳ ׳§׳ ׳• ׳‘׳¢׳‘׳¨׳™׳×. ׳׳ ׳׳™׳ ׳₪׳™׳¨׳•׳˜, ׳›׳×׳•׳‘ "׳₪׳¨׳™׳˜ ׳›׳׳׳™"
+- ׳׳ ׳©׳“׳” ׳׳ ׳ ׳™׳×׳ ׳׳§׳¨׳™׳׳”, ׳”׳©׳×׳׳© ׳‘-null
+- ׳”׳—׳–׳¨ JSON ׳‘׳׳‘׳“, ׳©׳•׳ ׳“׳‘׳¨ ׳׳—׳¨`
+            }
           ]
         }]
       })
@@ -35,12 +56,24 @@ app.post('/read-receipt', async (req, res) => {
 
     const rawText = await response.text();
     let data;
-    try { data = JSON.parse(rawText); } catch(e) { return res.status(500).json({ error: 'Bad Anthropic response: ' + rawText.slice(0,300) }); }
-    if (data.error) return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
+    try {
+      data = JSON.parse(rawText);
+    } catch(e) {
+      return res.status(500).json({ error: 'Bad Anthropic response: ' + rawText.slice(0, 300) });
+    }
+
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
+    }
 
     const text = (data.content || []).map(c => c.text || '').join('');
     let parsed;
-    try { parsed = JSON.parse(text.replace(/```json|```/g,'').trim()); } catch(e) { return res.status(500).json({ error: 'Parse error: ' + text.slice(0,200) }); }
+    try {
+      const clean = text.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      return res.status(500).json({ error: 'Parse error: ' + text.slice(0, 200) });
+    }
 
     res.json(parsed);
   } catch(e) {
