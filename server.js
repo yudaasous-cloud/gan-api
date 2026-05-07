@@ -23,42 +23,32 @@ app.post('/read-receipt', async (req, res) => {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 }
-            },
-            {
-              type: 'text',
-              text: `׳–׳•׳”׳™ ׳§׳‘׳׳” ׳׳• ׳—׳©׳‘׳•׳ ׳™׳×. ׳§׳¨׳ ׳׳•׳×׳” ׳‘׳¢׳™׳•׳ ׳•׳”׳—׳–׳¨ JSON ׳‘׳׳‘׳“, ׳׳׳ markdown, ׳׳׳ ׳”׳¡׳‘׳¨׳™׳, ׳׳׳ ׳˜׳§׳¡׳˜ ׳ ׳•׳¡׳£.
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 }
+              },
+              {
+                type: 'text',
+                text: `׳§׳¨׳ ׳׳× ׳”׳§׳‘׳׳” ׳•׳”׳—׳–׳¨ JSON ׳‘׳׳‘׳“. ׳׳¡׳•׳¨ backticks, ׳׳¡׳•׳¨ markdown, ׳׳¡׳•׳¨ ׳”׳¡׳‘׳¨׳™׳.
 
-׳₪׳•׳¨׳׳˜ ׳׳“׳•׳™׳§:
-{"date":"YYYY-MM-DD","amount":0.00,"description":"׳©׳ ׳”׳¢׳¡׳§","items":"׳₪׳¨׳™׳˜ ׳, ׳₪׳¨׳™׳˜ ׳‘, ׳₪׳¨׳™׳˜ ׳’"}
+{"date":"YYYY-MM-DD","amount":0.00,"description":"׳©׳ ׳”׳¢׳¡׳§","items":"׳₪׳¨׳™׳˜ ׳, ׳₪׳¨׳™׳˜ ׳‘"}
 
-׳”׳ ׳—׳™׳•׳× ׳׳›׳ ׳©׳“׳”:
-
-date ג€” ׳×׳׳¨׳™׳ ׳”׳§׳‘׳׳” ׳‘׳₪׳•׳¨׳׳˜ YYYY-MM-DD ׳‘׳׳‘׳“.
-  ׳“׳•׳’׳׳׳•׳×: 17/04/2026 ג†’ "2026-04-17" | 09/02/26 ג†’ "2026-02-09"
-
-amount ג€” ׳”׳¡׳›׳•׳ ׳”׳›׳•׳׳ ׳׳×׳©׳׳•׳ ׳›׳׳¡׳₪׳¨ ׳¢׳©׳¨׳•׳ ׳™ ׳‘׳׳‘׳“ (׳׳ ׳׳—׳¨׳•׳–׳×).
-  ׳—׳₪׳©: "׳׳×׳©׳׳•׳", "׳¡׳”׳´׳›", "total", "׳¡׳›׳•׳". ׳“׳•׳’׳׳”: 44.04
-
-description ג€” ׳©׳ ׳”׳¢׳¡׳§ ׳‘׳“׳™׳•׳§ ׳›׳₪׳™ ׳©׳›׳×׳•׳‘ ׳‘׳¨׳׳© ׳”׳§׳‘׳׳”.
-  ׳›׳׳•׳ ׳¡׳™׳•׳׳•׳× ׳›׳׳• ׳‘׳¢"׳ / ׳‘׳¢"׳© / ׳‘׳¢"׳¨.
-  ׳׳ ׳×׳•׳¡׳™׳£ ׳›׳×׳•׳‘׳×, ׳׳ ׳×׳©׳ ׳”, ׳׳ ׳×׳₪׳¨׳© ג€” ׳”׳¢׳×׳§ ׳‘׳“׳™׳•׳§.
-
-items ג€” ׳¨׳©׳™׳׳× ׳©׳׳•׳× ׳”׳₪׳¨׳™׳˜׳™׳ ׳©׳ ׳¨׳›׳©׳•, ׳׳•׳₪׳¨׳“׳™׳ ׳‘׳₪׳¡׳™׳§.
-  ׳—׳©׳•׳‘ ׳׳׳•׳“: ׳–׳” ׳—׳™׳™׳‘ ׳׳”׳™׳•׳× ׳׳—׳¨׳•׳–׳× ׳˜׳§׳¡׳˜ ׳¨׳’׳™׳׳” ׳‘׳׳‘׳“ ג€” ׳׳ ׳׳¢׳¨׳, ׳׳ ׳׳•׳‘׳™׳™׳§׳˜ JSON.
-  ׳“׳•׳’׳׳” ׳ ׳›׳•׳ ׳”: "׳©׳•׳§׳•׳׳“ ׳¦׳™׳₪׳¡ ׳׳“׳™׳¨, ׳׳׳— ׳™׳ ׳“׳§ 500 ׳’׳¨׳, ׳‘׳™׳¦׳™׳ 12L"
-  ׳“׳•׳’׳׳” ׳©׳’׳•׳™׳”: [{"name":"׳©׳•׳§׳•׳׳“"}]
-
-׳׳ ׳©׳“׳” ׳›׳׳©׳”׳• ׳׳ ׳ ׳™׳×׳ ׳׳§׳¨׳™׳׳” ג€” ׳”׳©׳×׳׳© ׳‘-null.
-׳”׳—׳–׳¨ JSON ׳‘׳׳‘׳“.`
-            }
-          ]
-        }]
+date: ׳×׳׳¨׳™׳ ׳‘׳₪׳•׳¨׳׳˜ YYYY-MM-DD. ׳“׳•׳’׳׳”: 17/04/2026 ׳”׳•׳₪׳ ׳-2026-04-17
+amount: ׳¡׳›׳•׳ ׳׳×׳©׳׳•׳ ׳›׳׳¡׳₪׳¨ ׳‘׳׳‘׳“
+description: ׳©׳ ׳”׳¢׳¡׳§ ׳‘׳“׳™׳•׳§ ׳›׳₪׳™ ׳©׳›׳×׳•׳‘ ׳‘׳¨׳׳© ׳”׳§׳‘׳׳” ׳›׳•׳׳ ׳‘׳¢"׳
+items: ׳©׳׳•׳× ׳”׳₪׳¨׳™׳˜׳™׳ ׳›׳׳—׳¨׳•׳–׳× ׳˜׳§׳¡׳˜ ׳¨׳’׳™׳׳” ׳׳•׳₪׳¨׳“׳™׳ ׳‘׳₪׳¡׳™׳§ ג€” ׳׳ ׳׳¢׳¨׳ JSON`
+              }
+            ]
+          },
+          {
+            role: 'assistant',
+            content: '{'
+          }
+        ]
       })
     });
 
@@ -75,15 +65,24 @@ items ג€” ׳¨׳©׳™׳׳× ׳©׳׳•׳× ׳”׳₪׳¨׳™׳˜׳
     }
 
     const text = (data.content || []).map(c => c.text || '').join('');
+    
+    // The assistant started with '{', so prepend it
+    const fullJson = '{' + text.replace(/```json|```/g, '').trim();
+    
     let parsed;
     try {
-      const clean = text.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
+      parsed = JSON.parse(fullJson);
     } catch(e) {
-      return res.status(500).json({ error: 'Parse error: ' + text.slice(0, 200) });
+      // Fallback: try to parse just the text
+      try {
+        const clean = text.replace(/```json|```/g, '').trim();
+        parsed = JSON.parse(clean.startsWith('{') ? clean : '{' + clean);
+      } catch(e2) {
+        return res.status(500).json({ error: 'Parse error: ' + fullJson.slice(0, 200) });
+      }
     }
 
-    // Safety: ensure items is always a plain string
+    // Ensure items is always a plain string
     if (parsed.items !== null && parsed.items !== undefined && typeof parsed.items !== 'string') {
       if (Array.isArray(parsed.items)) {
         parsed.items = parsed.items.map(i => {
