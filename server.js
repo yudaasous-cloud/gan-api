@@ -146,99 +146,82 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('listening on', PORT));
 
 
-// ג”€ג”€ Excel export with chart ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+// ג”€ג”€ Excel export with pie chart (using jszip) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 app.post('/export-excel', async (req, res) => {
   try {
     const { receipts, payers } = req.body;
-    const ExcelJS = require('exceljs');
-    const wb = new ExcelJS.Workbook();
-    wb.creator = '׳’׳ ׳¢׳•׳₪׳¨׳™׳';
-
-    // ג”€ג”€ Sheet 1: All receipts ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-    const ws1 = wb.addWorksheet('׳§׳‘׳׳•׳×');
-    ws1.views = [{ rightToLeft: true }];
-
-    const headers = ['׳×׳׳¨׳™׳','׳×׳™׳׳•׳¨','׳₪׳¨׳™׳˜׳™׳','׳¡׳›׳•׳','׳§׳˜׳’׳•׳¨׳™׳”','׳׳©׳׳','׳¡׳˜׳˜׳•׳¡ ׳”׳—׳–׳¨','׳¡׳›׳•׳ ׳©׳”׳•׳—׳–׳¨','׳”׳•׳¡׳£ ׳¢׳ ׳™׳“׳™','׳”׳¢׳¨׳•׳×'];
+    const JSZip = require('jszip');
+    
+    const payerName = p => { const f = payers?.find(x=>x.key===p); return f ? f.name : p||''; };
     const refundLabel = s => ({pending:'׳׳׳×׳™׳',refunded:'׳”׳•׳—׳–׳¨',partial:'׳—׳׳§׳™',na:'׳׳ ׳¨׳׳•׳•׳ ׳˜׳™'}[s]||s||'');
-    const payerName = p => { const f = payers?.find(x=>x.key===p); return f ? f.name : p || ''; };
-
-    ws1.addRow(headers);
-    ws1.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    ws1.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3DAA7A' } };
-
-    receipts.forEach(r => {
-      ws1.addRow([r.date||'', r.desc||'', r.items||'', r.amount||0, r.category||'', payerName(r.payer), refundLabel(r.refundStatus), r.refundedAmount||0, r.addedBy||'', r.notes||'']);
-    });
-
-    [20,30,40,12,18,14,14,14,14,20].forEach((w,i) => ws1.getColumn(i+1).width = w);
-    ws1.getColumn(4).numFmt = 'ג‚×#,##0.00';
-    ws1.getColumn(8).numFmt = 'ג‚×#,##0.00';
-
-    // ג”€ג”€ Sheet 2: Category summary + pie chart ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-    const ws2 = wb.addWorksheet('׳¡׳™׳›׳•׳ ׳§׳˜׳’׳•׳¨׳™׳•׳×');
-    ws2.views = [{ rightToLeft: true }];
-    ws2.addRow(['׳§׳˜׳’׳•׳¨׳™׳”', '׳¡׳”"׳› ׳”׳•׳¦׳׳•׳×', '׳׳¡׳₪׳¨ ׳§׳‘׳׳•׳×', '׳׳׳×׳™׳ ׳׳”׳—׳–׳¨']);
-    ws2.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    ws2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3DAA7A' } };
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
     const byCat = {};
     receipts.forEach(r => {
-      const cat = r.category || '׳©׳•׳ ׳•׳×';
-      if (!byCat[cat]) byCat[cat] = { total: 0, count: 0, pending: 0 };
-      byCat[cat].total += r.amount || 0;
-      byCat[cat].count++;
-      if (r.refundStatus === 'pending' || r.refundStatus === 'partial')
-        byCat[cat].pending += (r.amount||0) - (r.refundedAmount||0);
+      const cat = r.category||'׳©׳•׳ ׳•׳×';
+      if (!byCat[cat]) byCat[cat] = { total:0, count:0, pending:0 };
+      byCat[cat].total += r.amount||0; byCat[cat].count++;
+      if (r.refundStatus==='pending'||r.refundStatus==='partial') byCat[cat].pending += (r.amount||0)-(r.refundedAmount||0);
     });
-
-    const catEntries = Object.entries(byCat).sort((a,b) => b[1].total - a[1].total);
-    catEntries.forEach(([cat, d]) => {
-      ws2.addRow([cat, parseFloat(d.total.toFixed(2)), d.count, parseFloat(d.pending.toFixed(2))]);
-    });
-    ws2.addRow(['׳¡׳”"׳›', parseFloat(receipts.reduce((s,r)=>s+(r.amount||0),0).toFixed(2)), receipts.length, '']);
-    ws2.lastRow.font = { bold: true };
-
-    [30, 18, 14, 18].forEach((w,i) => ws2.getColumn(i+1).width = w);
-    ws2.getColumn(2).numFmt = 'ג‚×#,##0.00';
-    ws2.getColumn(4).numFmt = 'ג‚×#,##0.00';
-
-    // Pie chart
-    const lastDataRow = catEntries.length + 1;
-    const chart = wb.addChart('pie', { style: 10 });
-    chart.title.name = '׳”׳•׳¦׳׳•׳× ׳׳₪׳™ ׳§׳˜׳’׳•׳¨׳™׳”';
-    chart.addSeries({
-      name: { sheet: '׳¡׳™׳›׳•׳ ׳§׳˜׳’׳•׳¨׳™׳•׳×', row: 1, col: 2 },
-      labels: { sheet: '׳¡׳™׳›׳•׳ ׳§׳˜׳’׳•׳¨׳™׳•׳×', fromRow: 2, fromCol: 1, toRow: lastDataRow, toCol: 1 },
-      values: { sheet: '׳¡׳™׳›׳•׳ ׳§׳˜׳’׳•׳¨׳™׳•׳×', fromRow: 2, fromCol: 2, toRow: lastDataRow, toCol: 2 },
-      dataLabels: { showPercent: true, showCatName: true }
-    });
-    chart.setPosition('F2', 'O22');
-    ws2.addChart(chart);
-
-    // ג”€ג”€ Sheet 3: Payer summary ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
-    const ws3 = wb.addWorksheet('׳¡׳™׳›׳•׳ ׳׳©׳׳׳™׳');
-    ws3.views = [{ rightToLeft: true }];
-    ws3.addRow(['׳׳©׳׳', '׳¡׳”"׳›', '׳׳¡׳₪׳¨ ׳§׳‘׳׳•׳×']);
-    ws3.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    ws3.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3DAA7A' } };
-
+    const catEntries = Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
+    const grandTotal = receipts.reduce((s,r)=>s+(r.amount||0),0);
     const byPayer = {};
-    receipts.forEach(r => {
-      const p = payerName(r.payer);
-      if (!byPayer[p]) byPayer[p] = { total: 0, count: 0 };
-      byPayer[p].total += r.amount||0;
-      byPayer[p].count++;
-    });
-    Object.entries(byPayer).forEach(([p, d]) => {
-      ws3.addRow([p, parseFloat(d.total.toFixed(2)), d.count]);
-    });
-    [20,16,14].forEach((w,i) => ws3.getColumn(i+1).width = w);
-    ws3.getColumn(2).numFmt = 'ג‚×#,##0.00';
+    receipts.forEach(r => { const p=payerName(r.payer); if(!byPayer[p]) byPayer[p]={total:0,count:0}; byPayer[p].total+=r.amount||0; byPayer[p].count++; });
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="gan_ofarim.xlsx"');
-    await wb.xlsx.write(res);
+    // Shared strings
+    const strs = []; const si = v => { const s=String(v||''); const i=strs.indexOf(s); if(i>=0)return i; strs.push(s); return strs.length-1; };
+    const cols = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const cs = (col,row,val) => `<c r="${col}${row}" t="s"><v>${si(String(val))}</v></c>`;
+    const cn = (col,row,val) => `<c r="${col}${row}"><v>${parseFloat(Number(val).toFixed(2))}</v></c>`;
+
+    // Sheet 1
+    const h1 = ['׳×׳׳¨׳™׳','׳×׳™׳׳•׳¨','׳₪׳¨׳™׳˜׳™׳','׳¡׳›׳•׳ (ג‚×)','׳§׳˜׳’׳•׳¨׳™׳”','׳׳©׳׳','׳¡׳˜׳˜׳•׳¡ ׳”׳—׳–׳¨','׳”׳•׳—׳–׳¨ (ג‚×)','׳”׳•׳¡׳£ ׳¢"׳™','׳”׳¢׳¨׳•׳×'];
+    h1.forEach(h=>si(h));
+    let s1r = `<row r="1">${h1.map((h,i)=>cs(cols[i],1,h)).join('')}</row>`;
+    receipts.forEach((r,ri) => {
+      const row=[r.date||'',r.desc||'',r.items||'',r.amount||0,r.category||'',payerName(r.payer),refundLabel(r.refundStatus),r.refundedAmount||0,r.addedBy||'',r.notes||''];
+      s1r+=`<row r="${ri+2}">${row.map((c,ci)=>(ci===3||ci===7)?cn(cols[ci],ri+2,c):cs(cols[ci],ri+2,c)).join('')}</row>`;
+    });
+
+    // Sheet 2
+    const h2=['׳§׳˜׳’׳•׳¨׳™׳”','׳¡׳”"׳› (ג‚×)','׳§׳‘׳׳•׳×','׳׳׳×׳™׳ (ג‚×)']; h2.forEach(h=>si(h));
+    catEntries.forEach(([c])=>si(c)); si('׳¡׳”"׳›');
+    let s2r=`<row r="1">${h2.map((h,i)=>cs(cols[i],1,h)).join('')}</row>`;
+    catEntries.forEach(([cat,d],ri)=>{ s2r+=`<row r="${ri+2}">${cs('A',ri+2,cat)}${cn('B',ri+2,d.total)}${cn('C',ri+2,d.count)}${cn('D',ri+2,d.pending)}</row>`; });
+    const tr=catEntries.length+2; s2r+=`<row r="${tr}">${cs('A',tr,'׳¡׳”"׳›')}${cn('B',tr,grandTotal)}${cn('C',tr,receipts.length)}${cn('D',tr,0)}</row>`;
+
+    // Sheet 3
+    const h3=['׳׳©׳׳','׳¡׳”"׳› (ג‚×)','׳§׳‘׳׳•׳×']; h3.forEach(h=>si(h));
+    Object.keys(byPayer).forEach(p=>si(p));
+    let s3r=`<row r="1">${h3.map((h,i)=>cs(cols[i],1,h)).join('')}</row>`;
+    Object.entries(byPayer).forEach(([p,d],ri)=>{ s3r+=`<row r="${ri+2}">${cs('A',ri+2,p)}${cn('B',ri+2,d.total)}${cn('C',ri+2,d.count)}</row>`; });
+
+    const n=catEntries.length;
+    const zip = new JSZip();
+
+    zip.file('[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`);
+    zip.file('_rels/.rels',`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+    zip.file('xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="׳§׳‘׳׳•׳×" sheetId="1" r:id="rId1"/><sheet name="׳¡׳™׳›׳•׳" sheetId="2" r:id="rId2"/><sheet name="׳׳©׳׳׳™׳" sheetId="3" r:id="rId3"/></sheets></workbook>`);
+    zip.file('xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>`);
+    zip.file('xl/worksheets/sheet1.xml',`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetView rightToLeft="1" workbookViewId="0"/><sheetData>${s1r}</sheetData></worksheet>`);
+    zip.file('xl/worksheets/sheet2.xml',`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetView rightToLeft="1" workbookViewId="0"/><sheetData>${s2r}</sheetData><drawing r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></worksheet>`);
+    zip.file('xl/worksheets/sheet3.xml',`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetView rightToLeft="1" workbookViewId="0"/><sheetData>${s3r}</sheetData></worksheet>`);
+    zip.file('xl/sharedStrings.xml',`<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${strs.length}" uniqueCount="${strs.length}">${strs.map(s=>`<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}</sst>`);
+    zip.file('xl/worksheets/_rels/sheet2.xml.rels',`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`);
+    zip.file('xl/drawings/drawing1.xml',`<?xml version="1.0" encoding="UTF-8"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:twoCellAnchor><xdr:from><xdr:col>5</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>14</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>22</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>`);
+    zip.file('xl/drawings/_rels/drawing1.xml.rels',`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/></Relationships>`);
+    zip.file('xl/charts/chart1.xml',`<?xml version="1.0" encoding="UTF-8"?><c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>׳”׳•׳¦׳׳•׳× ׳׳₪׳™ ׳§׳˜׳’׳•׳¨׳™׳”</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:plotArea><c:pieChart><c:ser><c:idx val="0"/><c:order val="0"/><c:cat><c:strRef><c:f>׳¡׳™׳›׳•׳!$A$2:$A$${n+1}</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>׳¡׳™׳›׳•׳!$B$2:$B$${n+1}</c:f></c:numRef></c:val><c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="1"/><c:showSerName val="0"/><c:showPercent val="1"/></c:dLbls></c:ser><c:firstSliceAng val="0"/></c:pieChart></c:plotArea><c:legend><c:legendPos val="r"/></c:legend></c:chart></c:chartSpace>`);
+
+    const buf = await zip.generateAsync({ type:'nodebuffer' });
+    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition','attachment; filename="gan_ofarim.xlsx"');
+    res.send(buf);
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
+
+
+app.get('/', (req, res) => res.send('gan-api ok'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('listening on', PORT));
