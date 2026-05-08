@@ -172,7 +172,7 @@ app.post('/export-excel', async (req, res) => {
     const cn = (col,row,val) => `<c r="${col}${row}"><v>${parseFloat(Number(val).toFixed(2))}</v></c>`;
 
     // Sheet 1
-    const h1 = ['׳×׳׳¨׳™׳','׳×׳™׳׳•׳¨','׳₪׳¨׳™׳˜׳™׳','׳¡׳›׳•׳ (ג‚×)','׳§׳˜׳’׳•׳¨׳™׳”','׳׳©׳׳','׳¡׳˜׳˜׳•׳¡ ׳”׳—׳–׳¨','׳”׳•׳—׳–׳¨ (ג‚×)','׳”׳•׳¡׳£ ׳¢"׳™','׳”׳¢׳¨׳•׳×'];
+    const h1 = ['׳×׳׳¨׳™׳','׳×׳™׳׳•׳¨','׳₪׳¨׳™׳˜׳™׳','׳¡׳›׳•׳','׳§׳˜׳’׳•׳¨׳™׳”','׳׳©׳׳','׳¡׳˜׳˜׳•׳¡ ׳”׳—׳–׳¨','׳¡׳›׳•׳ ׳©׳”׳•׳—׳–׳¨','׳”׳•׳¡׳£ ׳¢׳ ׳™׳“׳™','׳”׳¢׳¨׳•׳×'];
     h1.forEach(h=>si(h));
     let s1r = `<row r="1">${h1.map((h,i)=>cs(cols[i],1,h)).join('')}</row>`;
     receipts.forEach((r,ri) => {
@@ -181,14 +181,14 @@ app.post('/export-excel', async (req, res) => {
     });
 
     // Sheet 2
-    const h2=['׳§׳˜׳’׳•׳¨׳™׳”','׳¡׳”"׳› (ג‚×)','׳§׳‘׳׳•׳×','׳׳׳×׳™׳ (ג‚×)']; h2.forEach(h=>si(h));
-    catEntries.forEach(([c])=>si(c)); si('׳¡׳”"׳›');
+    const h2=['׳§׳˜׳’׳•׳¨׳™׳”','׳¡׳”׳›','׳§׳‘׳׳•׳×','׳׳׳×׳™׳ ׳׳”׳—׳–׳¨']; h2.forEach(h=>si(h));
+    catEntries.forEach(([c])=>si(c)); si('׳¡׳”׳›');
     let s2r=`<row r="1">${h2.map((h,i)=>cs(cols[i],1,h)).join('')}</row>`;
     catEntries.forEach(([cat,d],ri)=>{ s2r+=`<row r="${ri+2}">${cs('A',ri+2,cat)}${cn('B',ri+2,d.total)}${cn('C',ri+2,d.count)}${cn('D',ri+2,d.pending)}</row>`; });
-    const tr=catEntries.length+2; s2r+=`<row r="${tr}">${cs('A',tr,'׳¡׳”"׳›')}${cn('B',tr,grandTotal)}${cn('C',tr,receipts.length)}${cn('D',tr,0)}</row>`;
+    const tr=catEntries.length+2; s2r+=`<row r="${tr}">${cs('A',tr,'׳¡׳”׳›')}${cn('B',tr,grandTotal)}${cn('C',tr,receipts.length)}${cn('D',tr,0)}</row>`;
 
     // Sheet 3
-    const h3=['׳׳©׳׳','׳¡׳”"׳› (ג‚×)','׳§׳‘׳׳•׳×']; h3.forEach(h=>si(h));
+    const h3=['׳׳©׳׳','׳¡׳”׳›','׳§׳‘׳׳•׳×']; h3.forEach(h=>si(h));
     Object.keys(byPayer).forEach(p=>si(p));
     let s3r=`<row r="1">${h3.map((h,i)=>cs(cols[i],1,h)).join('')}</row>`;
     Object.entries(byPayer).forEach(([p,d],ri)=>{ s3r+=`<row r="${ri+2}">${cs('A',ri+2,p)}${cn('B',ri+2,d.total)}${cn('C',ri+2,d.count)}</row>`; });
